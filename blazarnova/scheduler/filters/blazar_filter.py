@@ -89,9 +89,9 @@ class ClimateFilter(filters.BaseHostFilter):
         aggregates = db.aggregate_get_by_host(context, host_state.host)
         pools = []
         for agg in aggregates:
-            if (agg['availability_zone'].startswith(
+            if (agg['availability_zone'] and (agg['availability_zone'].startswith(
                     cfg.CONF['blazar:physical:host'].blazar_az_prefix)
-                    or agg['availability_zone'].startswith('climate:')):
+                    or agg['availability_zone'].startswith('climate:'))):
                 pools.append(agg)
             if agg['name'] == (
                     cfg.CONF['blazar:physical:host'].aggregate_freepool_name):
