@@ -18,7 +18,6 @@ import six
 
 from blazarnova.i18n import _  # noqa
 
-from nova import db
 from nova.scheduler import filters
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -86,14 +85,14 @@ class ClimateFilter(filters.BaseHostFilter):
         # Get any reservation pools this host is part of
         # Note this include possibly the freepool
 
-        aggregates = db.aggregate_get_by_host(context, host_state.host)
+        aggregates = host_state.aggregates
         pools = []
         for agg in aggregates:
-            if (agg['availability_zone'].startswith(
+            if (str(agg.availability_zone).startswith(
                     cfg.CONF['blazar:physical:host'].blazar_az_prefix)
-                    or agg['availability_zone'].startswith('climate:')):
+                    or str(agg.availability_zone).startswith('climate:')):
                 pools.append(agg)
-            if agg['name'] == (
+            if agg.name == (
                     cfg.CONF['blazar:physical:host'].aggregate_freepool_name):
                 pools.append(agg)
 
@@ -105,14 +104,14 @@ class ClimateFilter(filters.BaseHostFilter):
 
             # Find aggregate which matches Pool
             for pool in pools:
-                if pool['name'] in requested_pools:
+                if pool.name in requested_pools:
 
                     # Check tenant is allowed to use this Pool
 
                     # NOTE(sbauza): Currently, the key is only the project_id,
                     #  but later will possibly be blazar:tenant:{project_id}
                     key = context.project_id
-                    access = pool['metadetails'].get(key)
+                    access = pool.metadata.get(key)
                     if access:
                         return True
                     # NOTE(sbauza): We also need to check the blazar:owner key
@@ -121,13 +120,13 @@ class ClimateFilter(filters.BaseHostFilter):
                     owner = cfg.CONF['blazar:physical:host'].blazar_owner
                     # NOTE(pafuent): climate:owner was the previous default
                     # value.
-                    owner_project_id = pool['metadetails'].get(
-                        owner, pool['metadetails'].get('climate:owner'))
+                    owner_project_id = pool.metadata.get(
+                        owner, pool.metadata.get('climate:owner'))
                     if owner_project_id == context.project_id:
                         return True
                     LOG.info(_("Unauthorized request to use Pool "
                                "%(pool_id)s by tenant %(tenant_id)s"),
-                             {'pool_id': pool['name'],
+                             {'pool_id': pool.name,
                               'tenant_id': context.project_id})
                     return False
 
